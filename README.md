@@ -1,6 +1,6 @@
 
 # Objective
-The overall objective for this project is to write a code that can scrape the NICE website committee documents to extract the software used for the economic model development for each published guidance. This would then be used to determine the number and % of non-Excel models in submissions, and determine if there are trends by date or disease/submission type.
+The overall objective for this project is to write a code that can scrape the NICE website committee documents to extract the software used for the economic model development for each guidance piece. This would then be used to determine the number and % of non-Excel models in submissions, and determine if there are trends by date or disease/submission type.
 
 # Steps
 1. All NICE published evidence is in https://www.nice.org.uk/guidance/published. The table needs to be expanded to 'show all'. All information from this table needs to be scraped and stored.
