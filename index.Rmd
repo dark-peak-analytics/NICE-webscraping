@@ -1,0 +1,171 @@
+---
+title: "A summary of submission software used in NICE technology appraisals"
+subtitle: "Using webscraping of NICE guidance to identify software used for health economic modelling"
+author: "Rose Hart, Dark Peak Analytics Ltd."
+date: "Last updated: `r format(Sys.Date(), format = '%d %B %Y')`"
+output:
+  rmarkdown::html_document:
+    theme: flatly
+---
+
+
+<style type="text/css">
+.main-container {
+  max-width: 20000px;
+  margin-left: 50px;
+  margin-right: 50px;
+  margin-bottom: 50px;
+}
+</style>
+
+
+<p><a href="https://darkpeakanalytics.com/" target="_blank">
+  <img src = "DPAlogo.jpg" 
+       alt = 'logo'
+       style = 'position:absolute; top:0; right:0; padding:10px;'
+       width = '150px'
+       heigth = '150px' >
+</a></p>    
+
+---
+
+### Objective
+
+This document is intended to be a living document for recording the software used in the evidence submission for NICE technology appraisals (TAs). The motivation is to monitor trends in use of Excel spreadsheet versus code-based models in the development of submission evidence.
+
+**Disclaimer:** Please be advised that I am an independent entity and am not affiliated with the National Institute for Health and Care Excellence (NICE). This document presents the results of an exploratory analysis conducted through web-scraping. While efforts have been made to ensure accuracy, I cannot guarantee the correctness of individual entries and disclaim any liability thereof.
+
+This document is to be referenced as: *To add DOI number and reference*
+
+Notice something wrong or missing? Contact us at rhart@darkpeakanalytics.com with more information and we will try to incorporate it
+
+---
+
+### Method
+
+This analysis uses the `rvest` package and `pdftools` to go through each of the pages listed as [published guidance](https://www.nice.org.uk/guidance/published). No APIs or advanced LLM scraping was used, this was to make the code more accessible and can be forked, run and amended from the repo without need for license or server setup. More information on the specific methods can be found in the code comments in the GitHub Repository
+
+- Only Technology appraisals were scraped that were not listed at 'Terminated appraisals'. The code looks through the 'Evidence' tab and identifies the largest and most recent pdf file that contains specific terms ("Committee Papers", "Document B" and "evidence submission"). It then uses `pdftools` to read the document. 
+- The software terms that were scraped for were "Microsoft", "MS Excel", "in Excel", "VBA", " R " and "TreeAge". Lines of the PDF were identified with these terms. These were then cross-referenced with verbs ("built", "build", " constructed", "developed", "conducted", "programmed", "implemented", "perform", "utilises", "created") and all lines with software were extracted that were within 2 lines of any selected verb AND either "cost","economic" or "model"). Lines were then further cross-references with statistical terminology, removed if they were within 2 lines of any of the selected terms; this was to reduce noise, as often statistical analysis was conducted in R with the economic model being build in Excel.
+- The extracted lines then were counted for the number and type of software terms present. All TAs that returned software terms that were not only "Microsoft", "MS Excel" or "in Excel" were checked manually to confirm.
+
+The code for this document is hosted on GitHub at: https://github.com/dark-peak-analytics/NICE-webscraping
+
+---
+
+### Results
+
+#### *Results by year*
+
+The graph below shows the number of TAs and the software identified for each by year. 'No evidence available' indicates that there was no evidence in the 'Evidence' tab to extract. 'Not stated' indicates that evidence was identified and scraped but the criteria for extracting the technology were not met. 
+
+```{r, echo=FALSE, include=FALSE}
+library(billboarder)
+library(dplyr)
+library(stringr)
+library(DT)
+options(encoding = "UTF-8")
+```
+
+
+```{r graph_software, echo=FALSE}
+Guidance_TAs_list <- readRDS("Guidance_TAs_list.rds")
+
+res_table <- do.call("rbind",lapply(1:length(Guidance_TAs_list), function(N){
+  list_obj <- Guidance_TAs_list[[N]]
+  c(N,list_obj$result,list_obj$report,list_obj$overview$Reference.number,list_obj$overview$Published,list_obj$overview$Last.updated)
+}))
+res_table<- data.frame(res_table)
+colnames(res_table) <- c("N","result","report","refN","PublishedDate","LastUpdated")
+
+res_table$PublishedYr <- as.numeric(str_sub(res_table$PublishedDate,-2))
+res_table$PublishedYr <- ifelse(res_table$PublishedYr > 70, res_table$PublishedYr+1900,res_table$PublishedYr+2000)
+
+
+summary_table <- res_table %>% count(result,PublishedYr)
+summary_table <- summary_table[order(summary_table$PublishedYr),]
+
+billboarder() %>% 
+  bb_barchart(summary_table, bbaes(PublishedYr, n, group = result),
+               stacked = TRUE)
+  
+```
+
+#### *Results as proportion of total TAs*
+
+The pie chart shows each software result as a proportion of all TAs.
+
+*Note*: Click the legend to remove entries
+
+```{r graph_pie, echo=FALSE}
+summary_table2 <- res_table %>% count(result)
+summary_table2 <- summary_table2[c(2,3,1,5,4),] #Ordering to keep colours consistent with above
+billboarder() %>% 
+  bb_piechart(data = summary_table2, bbaes(result, n))
+
+
+```
+
+#### *TAs with evidence submitted using R or VBA*
+
+The tables below extract the details of TAs that did not use an Excel spreadsheet to develop the core model engine, instead opting for R or VBA to produce the model engine. The outputs show that code-based engines are being used for a wide variety of conditions and diseases.
+
+**TAs that use R for economic evidence submission**
+
+```{r graph_table_R, echo=FALSE}
+
+res_table_R <- res_table[which(res_table$result == "R"),]
+table_out_R <- as.data.frame(do.call('rbind',lapply(as.numeric(res_table_R$N), function(rowN){
+  list_obj <- Guidance_TAs_list[[rowN]]
+  out <- c(list_obj$overview$Reference.number,
+           list_obj$condition,
+           list_obj$disease,
+           list_obj$overview$Title,
+           list_obj$overview$Published,
+           list_obj$overview$address,
+           list_obj$resource_selected$url
+  )
+  out
+})))
+
+colnames(table_out_R) <- c("Technology appraisal","Condition","Disease","Title","Date published","Guidance","Evidence")
+table_out_R$Guidance <- paste0("<b><a href='",str_sub(table_out_R$Guidance,0,-10),"' target='_blank'>","Link","</a></b>")
+table_out_R$Evidence <- paste0("<b><a href='",table_out_R$Evidence,"' target='_blank'>","Link","</a></b>")
+
+datatable(table_out_R,
+          rownames = FALSE,
+          escape = FALSE)
+
+```
+
+**TAs that use VBA for economic evidence submission**
+
+```{r graph_table_VBA, echo=FALSE}
+
+res_table_VBA <- res_table[which(res_table$result == "VBA"),]
+table_out_VBA <- as.data.frame(do.call('rbind',lapply(as.numeric(res_table_VBA$N), function(rowN){
+  list_obj <- Guidance_TAs_list[[rowN]]
+  out <- c(list_obj$overview$Reference.number,
+           list_obj$condition,
+           list_obj$disease,
+           list_obj$overview$Title,
+           list_obj$overview$Published,
+           list_obj$overview$address,
+           list_obj$resource_selected$url
+  )
+  out
+})))
+
+colnames(table_out_VBA) <- c("Technology appraisal","Condition","Disease","Title","Date published","Guidance","Evidence")
+table_out_VBA$Guidance <- paste0("<b><a href='",table_out_VBA$Guidance,"' target='_blank'>","Link","</a></b>")
+table_out_VBA$Evidence <- paste0("<b><a href='",table_out_VBA$Evidence,"' target='_blank'>","Link","</a></b>")
+
+# Manual overwrite on 	Cystic fibrosis, as it has not got a separate condition and disease
+table_out_VBA$Disease[which(table_out_VBA$Condition == "Cystic fibrosis")] <- "Cystic fibrosis"
+table_out_VBA$Title <- str_replace_all(table_out_VBA$Title,"\u0096","-")
+
+datatable(table_out_VBA,
+          rownames = FALSE,
+          escape = FALSE)
+
+```
