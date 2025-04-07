@@ -35,7 +35,7 @@ This document is intended to be a living document for recording the software use
 
 **Disclaimer:** Please be advised that I am an independent entity and am not affiliated with the National Institute for Health and Care Excellence (NICE). This document presents the results of an exploratory analysis conducted through web-scraping. While efforts have been made to ensure accuracy, I cannot guarantee the correctness of individual entries and disclaim any liability thereof.
 
-This document is to be referenced as: *To add DOI number and reference*
+This document is to be referenced as: Hart R, A summary of submission software used in NICE technology appraisals, 2025, https://doi.org/10.5281/zenodo.15168411
 
 Notice something wrong or missing? Contact us at rhart@darkpeakanalytics.com with more information and we will try to incorporate it
 
